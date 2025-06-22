@@ -22,7 +22,8 @@ public class PagoService {
                 p.getId(),
                 p.getNPago(),
                 p.getTotalPagado(),
-                p.getCreadoEn() // ← Este es LocalDateTime y se formatea en el constructor del DTO
+                p.getCreadoEn(),
+                p.getMetodo()
         ));
     }
 }

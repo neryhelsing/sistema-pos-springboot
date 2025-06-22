@@ -31,6 +31,9 @@ public class Pago {
     @OneToMany(mappedBy = "pago", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DetallePago> detalles;
 
+    @Enumerated(EnumType.STRING)
+    private MetodoPago metodo;
+
     public Pago() {}
 
     // Getters y Setters
@@ -88,5 +91,13 @@ public class Pago {
 
     public void setDetalles(List<DetallePago> detalles) {
         this.detalles = detalles;
+    }
+
+    public MetodoPago getMetodo() {
+        return metodo;
+    }
+
+    public void setMetodo(MetodoPago metodo) {
+        this.metodo = metodo;
     }
 }

@@ -10,10 +10,6 @@ public class DetallePago {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private MetodoPago metodo; // EFECTIVO o TRANSFERENCIA
-
     @Column(name = "monto_efectivo")
     private Double montoEfectivo;
 
@@ -39,14 +35,6 @@ public class DetallePago {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public MetodoPago getMetodo() {
-        return metodo;
-    }
-
-    public void setMetodo(MetodoPago metodo) {
-        this.metodo = metodo;
     }
 
     public Double getMontoEfectivo() {
