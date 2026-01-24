@@ -18,7 +18,7 @@ public class DetallePago {
     @JoinColumn(name = "factura_id", nullable = false)
     private Factura factura;
 
-    @Column(name = "monto_aplicado", nullable = true)
+    @Column(name = "monto_aplicado", nullable = false)
     private Double montoAplicado;
 
     public DetallePago() {}

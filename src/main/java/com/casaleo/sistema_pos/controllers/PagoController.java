@@ -1,5 +1,6 @@
 package com.casaleo.sistema_pos.controllers;
 
+import com.casaleo.sistema_pos.dto.PagoCreateDTO;
 import com.casaleo.sistema_pos.dto.PagoResponseDTO;
 import com.casaleo.sistema_pos.services.PagoService;
 
@@ -22,5 +23,10 @@ public class PagoController {
             Pageable pageable
     ) {
         return pagoService.listarPagos(query, pageable);
+    }
+
+    @PostMapping
+    public PagoResponseDTO crearPago(@RequestBody PagoCreateDTO dto) {
+        return pagoService.crearPago(dto);
     }
 }

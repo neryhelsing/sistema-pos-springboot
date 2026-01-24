@@ -9,7 +9,7 @@ public class PagoResponseDTO {
     private Integer id;
     private String nPago;
     private Double totalPagado;
-    private String creadoEn; // ← Corregido a String
+    private String creadoEn;
     private MetodoPago metodo;
 
     public PagoResponseDTO(Integer id, String nPago, Double totalPagado, LocalDateTime creadoEn, MetodoPago metodo) {
@@ -18,9 +18,13 @@ public class PagoResponseDTO {
         this.totalPagado = totalPagado;
         this.metodo = metodo;
 
-        // Formatear LocalDateTime como String ISO
-        DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-        this.creadoEn = creadoEn.format(formatter);
+        // ✅ Evitar NullPointerException si DB aún no devolvió el timestamp
+        if (creadoEn != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            this.creadoEn = creadoEn.format(formatter);
+        } else {
+            this.creadoEn = null;
+        }
     }
 
     public Integer getId() {

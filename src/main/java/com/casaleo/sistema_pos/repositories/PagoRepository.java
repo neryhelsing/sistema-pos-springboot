@@ -6,5 +6,5 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PagoRepository extends JpaRepository<Pago, Integer> {
-    Page<Pago> findBynPagoContainingIgnoreCase(String query, Pageable pageable);
+    Page<Pago> findByNPagoContainingIgnoreCase(String query, Pageable pageable);
 }
