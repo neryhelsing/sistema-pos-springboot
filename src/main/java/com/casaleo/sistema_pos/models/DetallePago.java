@@ -10,21 +10,16 @@ public class DetallePago {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "monto_efectivo")
-    private Double montoEfectivo;
-
-    @Column(name = "monto_transferencia")
-    private Double montoTransferencia;
-
-    @Column
-    private String banco;
-
-    @Column(name = "n_operacion")
-    private String nOperacion;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pago_id", nullable = false)
     private Pago pago;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "factura_id", nullable = false)
+    private Factura factura;
+
+    @Column(name = "monto_aplicado", nullable = true)
+    private Double montoAplicado;
 
     public DetallePago() {}
 
@@ -37,43 +32,27 @@ public class DetallePago {
         this.id = id;
     }
 
-    public Double getMontoEfectivo() {
-        return montoEfectivo;
-    }
-
-    public void setMontoEfectivo(Double montoEfectivo) {
-        this.montoEfectivo = montoEfectivo;
-    }
-
-    public Double getMontoTransferencia() {
-        return montoTransferencia;
-    }
-
-    public void setMontoTransferencia(Double montoTransferencia) {
-        this.montoTransferencia = montoTransferencia;
-    }
-
-    public String getBanco() {
-        return banco;
-    }
-
-    public void setBanco(String banco) {
-        this.banco = banco;
-    }
-
-    public String getNOperacion() {
-        return nOperacion;
-    }
-
-    public void setNOperacion(String nOperacion) {
-        this.nOperacion = nOperacion;
-    }
-
     public Pago getPago() {
         return pago;
     }
 
     public void setPago(Pago pago) {
         this.pago = pago;
+    }
+
+    public Factura getFactura() {
+        return factura;
+    }
+
+    public void setFactura(Factura factura) {
+        this.factura = factura;
+    }
+
+    public Double getMontoAplicado() {
+        return montoAplicado;
+    }
+
+    public void setMontoAplicado(Double montoAplicado) {
+        this.montoAplicado = montoAplicado;
     }
 }

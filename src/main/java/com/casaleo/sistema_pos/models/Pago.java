@@ -24,10 +24,6 @@ public class Pago {
     @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "factura_id", nullable = false)
-    private Factura factura;
-
     @OneToMany(mappedBy = "pago", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DetallePago> detalles;
 
