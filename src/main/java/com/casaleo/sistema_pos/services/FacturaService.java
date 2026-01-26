@@ -42,8 +42,20 @@ public class FacturaService {
     @Autowired
     private DetalleFacturaRepository detalleFacturaRepository;
 
-    public Page<FacturaResponseDTO> listarDTO(Pageable pageable) {
-        Page<Factura> facturas = facturaRepository.findAll(pageable);
+    public Page<FacturaResponseDTO> listarDTO(String query, Pageable pageable) {
+
+        String q = (query == null) ? "" : query.trim();
+
+        Page<Factura> facturas;
+
+        if (q.isEmpty()) {
+            facturas = facturaRepository.findAll(pageable);
+        } else {
+            facturas = facturaRepository
+                    .findByNumeroFacturaContainingIgnoreCaseOrCliente_NombreContainingIgnoreCaseOrCliente_RucContainingIgnoreCase(
+                            q, q, q, pageable
+                    );
+        }
 
         List<FacturaResponseDTO> dtoList = facturas.getContent().stream()
                 .map(f -> new FacturaResponseDTO(
@@ -60,6 +72,7 @@ public class FacturaService {
 
         return new PageImpl<>(dtoList, pageable, facturas.getTotalElements());
     }
+
 
     @Transactional
     public Factura guardarFactura(FacturaDTO dto) {

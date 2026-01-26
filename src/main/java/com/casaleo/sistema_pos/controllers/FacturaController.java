@@ -24,9 +24,13 @@ public class FacturaController {
     private FacturaService facturaService;
 
     @GetMapping
-    public Page<FacturaResponseDTO> listarFacturasResumen(Pageable pageable) {
-        return facturaService.listarDTO(pageable);
+    public Page<FacturaResponseDTO> listarFacturasResumen(
+            @RequestParam(defaultValue = "") String query,
+            Pageable pageable
+    ) {
+        return facturaService.listarDTO(query, pageable);
     }
+
 
     @PostMapping
     public ResponseEntity<Integer> crearFactura(@RequestBody FacturaDTO dto) {

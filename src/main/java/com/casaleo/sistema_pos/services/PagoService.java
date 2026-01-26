@@ -34,7 +34,7 @@ public class PagoService {
     private ClienteRepository clienteRepository;
 
     public Page<PagoResponseDTO> listarPagos(String query, Pageable pageable) {
-        Page<Pago> pagos = pagoRepository.findByNPagoContainingIgnoreCase(query, pageable);
+        Page<Pago> pagos = pagoRepository.buscarPorNPago(query, pageable);
 
         return pagos.map(p -> new PagoResponseDTO(
                 p.getId(),
