@@ -1,9 +1,11 @@
 package com.casaleo.sistema_pos.dto;
 
+import java.math.BigDecimal;
+
 public class PagoDetalleCreateDTO {
 
     private Integer facturaId;
-    private Double montoAplicado;
+    private BigDecimal montoAplicado;
 
     public Integer getFacturaId() {
         return facturaId;
@@ -13,11 +15,11 @@ public class PagoDetalleCreateDTO {
         this.facturaId = facturaId;
     }
 
-    public Double getMontoAplicado() {
+    public BigDecimal getMontoAplicado() {
         return montoAplicado;
     }
 
-    public void setMontoAplicado(Double montoAplicado) {
+    public void setMontoAplicado(BigDecimal montoAplicado) {
         this.montoAplicado = montoAplicado;
     }
 }

@@ -2,6 +2,7 @@ package com.casaleo.sistema_pos.models;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "detalle_factura")
@@ -23,8 +24,8 @@ public class DetalleFactura {
     @Column(name = "cantidad", nullable = false)
     private Integer cantidad;
 
-    @Column(name = "precio_unitario", nullable = false)
-    private Double precioUnitario;
+    @Column(name = "precio_unitario", precision = 15, scale = 2, nullable = false)
+    private BigDecimal precioUnitario;
 
 
     // GETTERS Y SETTERS
@@ -61,11 +62,11 @@ public class DetalleFactura {
         this.cantidad = cantidad;
     }
 
-    public Double getPrecioUnitario() {
+    public BigDecimal getPrecioUnitario() {
         return precioUnitario;
     }
 
-    public void setPrecioUnitario(Double precioUnitario) {
+    public void setPrecioUnitario(BigDecimal precioUnitario) {
         this.precioUnitario = precioUnitario;
     }
 

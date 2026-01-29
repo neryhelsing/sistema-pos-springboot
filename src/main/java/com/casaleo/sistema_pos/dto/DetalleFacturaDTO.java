@@ -1,9 +1,12 @@
 package com.casaleo.sistema_pos.dto;
 
+import java.math.BigDecimal;
+
+
 public class DetalleFacturaDTO {
     private Integer productoId;
     private Integer cantidad;
-    private Double precioUnitario;
+    private BigDecimal precioUnitario;
 
     // GETTERS Y SETTERS
 
@@ -23,11 +26,11 @@ public class DetalleFacturaDTO {
         this.cantidad = cantidad;
     }
 
-    public Double getPrecioUnitario() {
+    public BigDecimal getPrecioUnitario() {
         return precioUnitario;
     }
 
-    public void setPrecioUnitario(Double precioUnitario) {
+    public void setPrecioUnitario(BigDecimal precioUnitario) {
         this.precioUnitario = precioUnitario;
     }
 

@@ -1,6 +1,7 @@
 package com.casaleo.sistema_pos.dto;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 import com.casaleo.sistema_pos.models.MetodoPago;
 import com.fasterxml.jackson.annotation.JsonAlias;
@@ -10,13 +11,21 @@ public class PagoCreateDTO {
 
     private Integer clienteId;
     private MetodoPago metodo;
+
+    // ===== TRANSFERENCIA =====
     private String banco;
 
-    // ✅ Fuerza a leer desde "nOperacion" (y acepta variantes)
     @JsonProperty("nOperacion")
     @JsonAlias({"NOperacion", "operacion", "n_operacion"})
     private String nOperacion;
 
+    private BigDecimal montoTransferido;
+
+    // ===== EFECTIVO =====
+    private BigDecimal montoEntregado;
+    private BigDecimal efectivoDevuelto;
+
+    // ===== FACTURAS =====
     private List<PagoDetalleCreateDTO> detalles;
 
     public Integer getClienteId() { return clienteId; }
@@ -30,6 +39,15 @@ public class PagoCreateDTO {
 
     public String getNOperacion() { return nOperacion; }
     public void setNOperacion(String nOperacion) { this.nOperacion = nOperacion; }
+
+    public BigDecimal getMontoTransferido() { return montoTransferido; }
+    public void setMontoTransferido(BigDecimal montoTransferido) { this.montoTransferido = montoTransferido; }
+
+    public BigDecimal getMontoEntregado() { return montoEntregado; }
+    public void setMontoEntregado(BigDecimal montoEntregado) { this.montoEntregado = montoEntregado; }
+
+    public BigDecimal getEfectivoDevuelto() { return efectivoDevuelto; }
+    public void setEfectivoDevuelto(BigDecimal efectivoDevuelto) { this.efectivoDevuelto = efectivoDevuelto; }
 
     public List<PagoDetalleCreateDTO> getDetalles() { return detalles; }
     public void setDetalles(List<PagoDetalleCreateDTO> detalles) { this.detalles = detalles; }

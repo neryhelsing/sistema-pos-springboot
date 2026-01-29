@@ -5,14 +5,16 @@ import java.time.format.DateTimeFormatter;
 
 import com.casaleo.sistema_pos.models.MetodoPago;
 
+import java.math.BigDecimal;
+
 public class PagoResponseDTO {
     private Integer id;
     private String nPago;
-    private Double totalPagado;
+    private BigDecimal totalPagado;
     private String creadoEn;
     private MetodoPago metodo;
 
-    public PagoResponseDTO(Integer id, String nPago, Double totalPagado, LocalDateTime creadoEn, MetodoPago metodo) {
+    public PagoResponseDTO(Integer id, String nPago, BigDecimal totalPagado, LocalDateTime creadoEn, MetodoPago metodo) {
         this.id = id;
         this.nPago = nPago;
         this.totalPagado = totalPagado;
@@ -35,7 +37,7 @@ public class PagoResponseDTO {
         return nPago;
     }
 
-    public Double getTotalPagado() {
+    public BigDecimal getTotalPagado() {
         return totalPagado;
     }
 

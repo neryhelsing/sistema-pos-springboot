@@ -2,15 +2,16 @@ package com.casaleo.sistema_pos.dto;
 
 import com.casaleo.sistema_pos.models.Factura;
 import java.util.Date;
+import java.math.BigDecimal;
 
 public class FacturaResponseDTO {
     private Integer id;
     private String numeroFactura;
     private Date fechaEmision;
-    private Double total;
+    private BigDecimal total;
     private String estado;
     private String clienteNombre;
-    private Double saldo;
+    private BigDecimal saldo;
     private Date creadoEn;
 
     // Constructor personalizado desde entidad Factura
@@ -26,7 +27,7 @@ public class FacturaResponseDTO {
     }
 
     // Constructor clásico
-    public FacturaResponseDTO(Integer id, String numeroFactura, Date fechaEmision, Double total, Double saldo, String estado, String clienteNombre, Date creadoEn) {
+    public FacturaResponseDTO(Integer id, String numeroFactura, Date fechaEmision, BigDecimal total, BigDecimal saldo, String estado, String clienteNombre, Date creadoEn) {
         this.id = id;
         this.numeroFactura = numeroFactura;
         this.fechaEmision = fechaEmision;
@@ -50,7 +51,7 @@ public class FacturaResponseDTO {
         return fechaEmision;
     }
 
-    public Double getTotal() {
+    public BigDecimal getTotal() {
         return total;
     }
 
@@ -66,7 +67,7 @@ public class FacturaResponseDTO {
         return creadoEn;
     }
 
-    public Double getSaldo() {
+    public BigDecimal getSaldo() {
         return saldo;
     }
 }

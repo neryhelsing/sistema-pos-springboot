@@ -1,5 +1,7 @@
 package com.casaleo.sistema_pos.services;
 
+import com.casaleo.sistema_pos.repositories.CorrelativoRepository;
+import com.casaleo.sistema_pos.models.Correlativo;
 import com.casaleo.sistema_pos.dto.FacturaDTO;
 import com.casaleo.sistema_pos.dto.DetalleFacturaDTO;
 import com.casaleo.sistema_pos.dto.FacturaResponseDTO;
@@ -11,7 +13,9 @@ import com.casaleo.sistema_pos.repositories.ClienteRepository;
 import com.casaleo.sistema_pos.repositories.ProductoRepository;
 import com.casaleo.sistema_pos.repositories.FacturaRepository;
 import com.casaleo.sistema_pos.repositories.DetalleFacturaRepository;
+import com.casaleo.sistema_pos.repositories.DetallePagoRepository;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +28,7 @@ import java.util.List;
 
 import java.util.Date;
 import java.util.Objects;
+import java.math.BigDecimal;
 
 
 
@@ -41,6 +46,13 @@ public class FacturaService {
 
     @Autowired
     private DetalleFacturaRepository detalleFacturaRepository;
+
+    @Autowired
+    private DetallePagoRepository detallePagoRepository;
+
+    @Autowired
+    private CorrelativoRepository correlativoRepository;
+
 
     public Page<FacturaResponseDTO> listarDTO(String query, Pageable pageable) {
 
@@ -77,11 +89,13 @@ public class FacturaService {
     @Transactional
     public Factura guardarFactura(FacturaDTO dto) {
         Factura factura = new Factura();
-        factura.setNumeroFactura(dto.getNumeroFactura());
-        factura.setFechaEmision(dto.getFechaEmision());
+        String num = dto.getNumeroFactura();
+        factura.setNumeroFactura((num == null || num.trim().isEmpty()) ? null : num.trim());
+        factura.setFechaEmision(null); // BORRADOR: sin fecha de emisión
         factura.setTotal(dto.getTotal());
         factura.setSaldo(dto.getTotal());
         factura.setEstado("BORRADOR");
+        factura.setEstadoPago("PENDIENTE");
         factura.setTipo(dto.getTipo());
 
         Cliente cliente = clienteRepository.findById(dto.getClienteId())
@@ -128,7 +142,6 @@ public class FacturaService {
         facturaExistente.setTipo(dto.getTipo());
         facturaExistente.setCliente(new Cliente(dto.getClienteId()));
         facturaExistente.setTotal(dto.getTotal());
-        facturaExistente.setFechaEmision(new Date());
 
         // Obtener detalles actuales
         List<DetalleFactura> detallesActuales = facturaExistente.getDetalles();
@@ -175,8 +188,8 @@ public class FacturaService {
 
 
 
-    public List<FacturaResponseDTO> buscarFacturasPendientesPorCliente(Long clienteId) {
-        List<Factura> pendientes = facturaRepository.findByCliente_IdAndSaldoGreaterThan(clienteId, 0.0);
+    public List<FacturaResponseDTO> buscarFacturasPendientesPorCliente(Integer clienteId) {
+        List<Factura> pendientes = facturaRepository.findByCliente_IdAndSaldoGreaterThan(clienteId, BigDecimal.ZERO);
         return pendientes.stream()
                 .map(FacturaResponseDTO::new)
                 .toList();
@@ -187,7 +200,83 @@ public class FacturaService {
 
 
 
+
+    @Transactional
+    public Factura emitirCredito(Integer facturaId) {
+
+        Factura f = facturaRepository.findById(facturaId)
+                .orElseThrow(() -> new RuntimeException("Factura no encontrada con ID: " + facturaId));
+
+        // Si ya está emitida, no repetir
+        if ("EMITIDA".equalsIgnoreCase(f.getEstado())) {
+            return f;
+        }
+
+        // Solo permitimos emitir si está en borrador
+        if (!"BORRADOR".equalsIgnoreCase(f.getEstado())) {
+            throw new RuntimeException("Solo se puede emitir una factura en estado BORRADOR.");
+        }
+
+        // ✅ Asignar número correlativo REAL + reintento si choca UNIQUE
+        if (f.getNumeroFactura() == null || f.getNumeroFactura().trim().isEmpty() || "0".equals(f.getNumeroFactura())) {
+
+            int intentos = 0;
+
+            while (true) {
+                intentos++;
+                if (intentos > 5) {
+                    throw new RuntimeException("No se pudo asignar un número de factura único. Intenta nuevamente.");
+                }
+
+                Correlativo cor = correlativoRepository.findByClaveForUpdate("FACTURA");
+                if (cor == null) {
+                    throw new RuntimeException("No existe correlativo configurado para FACTURA.");
+                }
+
+                Long numero = cor.getSiguienteNumero();
+
+                // Reservar siguiente número
+                cor.setSiguienteNumero(numero + 1);
+                correlativoRepository.save(cor);
+
+                // Intentar asignar
+                f.setNumeroFactura(String.valueOf(numero));
+
+                try {
+                    // Forzamos flush para que el UNIQUE se valide acá dentro del loop
+                    facturaRepository.saveAndFlush(f);
+                    break; // ✅ ok, número reservado y guardado
+                } catch (DataIntegrityViolationException ex) {
+                    // chocó el UNIQUE (ej: alguien metió un numero manual, backup, etc.)
+                    f.setNumeroFactura(null);
+                }
+            }
+        }
+
+        // ✅ Emitir a crédito
+        f.setEstado("EMITIDA");
+        f.setTipo("FCR"); // crédito
+        f.setFechaEmision(new Date());
+
+        // estado_pago no cambia por emitir, pero si está vacío lo dejamos en PENDIENTE
+        if (f.getEstadoPago() == null || f.getEstadoPago().trim().isEmpty()) {
+            f.setEstadoPago("PENDIENTE");
+        }
+
+        return facturaRepository.save(f);
+    }
+
+
+
+
     public Optional<Factura> obtenerPorId(Integer id) {
         return facturaRepository.findById(id);
+    }
+
+
+
+    public BigDecimal obtenerMontoAplicado(Integer facturaId) {
+        BigDecimal pagado = detallePagoRepository.sumMontoAplicadoByFacturaId(facturaId);
+        return pagado == null ? BigDecimal.ZERO : pagado;
     }
 }

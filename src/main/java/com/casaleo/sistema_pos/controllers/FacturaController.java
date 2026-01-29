@@ -60,7 +60,9 @@ public class FacturaController {
         dto.setClienteId(factura.getCliente().getId());
         dto.setTotal(factura.getTotal());
         dto.setSaldo(factura.getSaldo()); // ✅ agregado
+        dto.setMontoAplicado(facturaService.obtenerMontoAplicado(id)); // ✅ NUEVO (Pagado)
         dto.setEstado(factura.getEstado());
+        dto.setEstadoPago(factura.getEstadoPago());
         dto.setTipo(factura.getTipo());
 
         List<DetalleFacturaDTO> detallesDTO = new ArrayList<>();
@@ -80,7 +82,19 @@ public class FacturaController {
 
 
     @GetMapping("/pendientes")
-    public ResponseEntity<List<FacturaResponseDTO>> listarFacturasPendientes(@RequestParam Long clienteId) {
+    public ResponseEntity<List<FacturaResponseDTO>> listarFacturasPendientes(@RequestParam Integer clienteId) {
         return ResponseEntity.ok(facturaService.buscarFacturasPendientesPorCliente(clienteId));
+    }
+
+    @PostMapping("/{id}/emitir-credito")
+    public ResponseEntity<?> emitirCredito(@PathVariable Integer id) {
+        try {
+            Factura factura = facturaService.emitirCredito(id);
+            return ResponseEntity.ok(factura.getNumeroFactura());
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
     }
 }

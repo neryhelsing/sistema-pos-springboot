@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "pagos")
@@ -19,7 +20,7 @@ public class Pago {
     private Cliente cliente;
 
     // DB: n_pago (NOT NULL, UNIQUE)
-    @Column(name = "n_pago", nullable = false, unique = true)
+    @Column(name = "n_pago", nullable = true, unique = true)
     private String nPago;
 
     // DB: metodo (NOT NULL) enum('EFECTIVO','TRANSFERENCIA')
@@ -28,16 +29,28 @@ public class Pago {
     private MetodoPago metodo;
 
     // DB: banco (NULL)
-    @Column(name = "banco")
+    @Column(name = "banco", nullable = true)
     private String banco;
 
     // DB: n_operacion (NULL)
-    @Column(name = "n_operacion")
+    @Column(name = "n_operacion", nullable = true)
     private String nOperacion;
 
     // DB: total_pagado (NOT NULL)
-    @Column(name = "total_pagado", nullable = false)
-    private Double totalPagado;
+    @Column(name = "total_pagado", nullable = false, precision = 15, scale = 2)
+    private BigDecimal totalPagado;
+
+    @Column(name = "monto_entregado", precision = 15, scale = 2, nullable = true)
+    private BigDecimal montoEntregado;
+
+    @Column(name = "vuelto", precision = 15, scale = 2, nullable = true)
+    private BigDecimal vuelto = BigDecimal.ZERO;
+
+    @Column(name = "monto_transferido", precision = 15, scale = 2, nullable = true)
+    private BigDecimal montoTransferido;
+
+    @Column(name = "efectivo_devuelto", precision = 15, scale = 2, nullable = true)
+    private BigDecimal efectivoDevuelto = BigDecimal.ZERO;
 
     // DB: creado_en timestamp DEFAULT current_timestamp()
     // Lo maneja la DB -> JPA solo lee
@@ -103,12 +116,44 @@ public class Pago {
         this.nOperacion = nOperacion;
     }
 
-    public Double getTotalPagado() {
+    public BigDecimal getTotalPagado() {
         return totalPagado;
     }
 
-    public void setTotalPagado(Double totalPagado) {
+    public void setTotalPagado(BigDecimal totalPagado) {
         this.totalPagado = totalPagado;
+    }
+
+    public BigDecimal getMontoEntregado() {
+        return montoEntregado;
+    }
+
+    public void setMontoEntregado(BigDecimal montoEntregado) {
+        this.montoEntregado = montoEntregado;
+    }
+
+    public BigDecimal getVuelto() {
+        return vuelto;
+    }
+
+    public void setVuelto(BigDecimal vuelto) {
+        this.vuelto = vuelto;
+    }
+
+    public BigDecimal getMontoTransferido() {
+        return montoTransferido;
+    }
+
+    public void setMontoTransferido(BigDecimal montoTransferido) {
+        this.montoTransferido = montoTransferido;
+    }
+
+    public BigDecimal getEfectivoDevuelto() {
+        return efectivoDevuelto;
+    }
+
+    public void setEfectivoDevuelto(BigDecimal efectivoDevuelto) {
+        this.efectivoDevuelto = efectivoDevuelto;
     }
 
     public LocalDateTime getCreadoEn() {

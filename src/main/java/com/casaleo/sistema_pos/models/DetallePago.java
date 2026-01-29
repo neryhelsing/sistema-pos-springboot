@@ -1,6 +1,7 @@
 package com.casaleo.sistema_pos.models;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "detalle_pago")
@@ -18,8 +19,8 @@ public class DetallePago {
     @JoinColumn(name = "factura_id", nullable = false)
     private Factura factura;
 
-    @Column(name = "monto_aplicado", nullable = false)
-    private Double montoAplicado;
+    @Column(name = "monto_aplicado", precision = 15, scale = 2, nullable = false)
+    private BigDecimal montoAplicado;
 
     public DetallePago() {}
 
@@ -48,11 +49,11 @@ public class DetallePago {
         this.factura = factura;
     }
 
-    public Double getMontoAplicado() {
+    public BigDecimal getMontoAplicado() {
         return montoAplicado;
     }
 
-    public void setMontoAplicado(Double montoAplicado) {
+    public void setMontoAplicado(BigDecimal montoAplicado) {
         this.montoAplicado = montoAplicado;
     }
 }

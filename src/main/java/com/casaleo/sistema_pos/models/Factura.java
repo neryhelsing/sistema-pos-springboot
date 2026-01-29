@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "factura")
@@ -15,27 +16,32 @@ public class Factura {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "numero_factura", nullable = false)
+    @Column(name = "numero_factura", nullable = true)
     private String numeroFactura;
 
-    @Column(name = "fecha_emision", nullable = false)
+    @Column(name = "fecha_emision", nullable = true)
     @Temporal(TemporalType.DATE)
     private Date fechaEmision;
 
-    @Column(nullable = false)
-    private Double total;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal total;
 
-    @Column(nullable = false)
-    private Double saldo;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal saldo;
 
-    @Column(name = "creado_en", updatable = false)
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creado_en",  insertable=false, updatable = false)
     private Date creadoEn;
 
-    @Column(name = "actualizado_en")
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "actualizado_en", insertable=false, updatable=false)
     private Date actualizadoEn;
 
     @Column(nullable = false)
     private String estado;  // BORRADOR, EMITIDO, ANULADO, etc.
+
+    @Column(name = "estado_pago", nullable = false)
+    private String estadoPago; // PENDIENTE | PARCIAL | PAGADA
 
     @Column(nullable = false)
     private String tipo;  // FCC o FCR
@@ -74,11 +80,11 @@ public class Factura {
         this.fechaEmision = fechaEmision;
     }
 
-    public Double getTotal() {
+    public BigDecimal getTotal() {
         return total;
     }
 
-    public void setTotal(Double total) {
+    public void setTotal(BigDecimal total) {
         this.total = total;
     }
 
@@ -89,6 +95,10 @@ public class Factura {
     public void setEstado(String estado) {
         this.estado = estado;
     }
+
+    public String getEstadoPago() { return estadoPago; }
+
+    public void setEstadoPago(String estadoPago) { this.estadoPago = estadoPago; }
 
     public String getTipo() {
         return tipo;
@@ -114,11 +124,11 @@ public class Factura {
         this.detalles = detalles;
     }
 
-    public Double getSaldo() {
+    public BigDecimal getSaldo() {
         return saldo;
     }
 
-    public void setSaldo(Double saldo) {
+    public void setSaldo(BigDecimal saldo) {
         this.saldo = saldo;
     }
 

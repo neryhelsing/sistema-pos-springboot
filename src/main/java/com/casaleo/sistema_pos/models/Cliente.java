@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 public class Cliente {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Genera IDs automáticamente
-    private int id;
+    private Integer id;
 
     @Column(nullable = false, length = 255) // La columna "nombre" no permite valores nulos
     private String nombre;
@@ -42,11 +42,11 @@ public class Cliente {
 
     // Getters y Setters (pueden ser generados automáticamente por tu IDE)
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 

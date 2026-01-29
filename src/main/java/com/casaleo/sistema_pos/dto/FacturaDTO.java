@@ -2,16 +2,21 @@ package com.casaleo.sistema_pos.dto;
 
 import java.util.Date;
 import java.util.List;
+import java.math.BigDecimal;
+
 
 public class FacturaDTO {
     private String numeroFactura;
     private Date fechaEmision;
     private Integer clienteId;
-    private Double total;
+    private BigDecimal total;
     private String estado;
+    private String estadoPago;
     private String tipo; // FCC o FCR
-    private Double saldo;
+    private BigDecimal saldo;
+    private BigDecimal montoAplicado; // ✅ NUEVO (Pagado)
     private List<DetalleFacturaDTO> detalles;
+
 
     // GETTERS Y SETTERS
 
@@ -39,11 +44,11 @@ public class FacturaDTO {
         this.clienteId = clienteId;
     }
 
-    public Double getTotal() {
+    public BigDecimal getTotal() {
         return total;
     }
 
-    public void setTotal(Double total) {
+    public void setTotal(BigDecimal total) {
         this.total = total;
     }
 
@@ -54,6 +59,10 @@ public class FacturaDTO {
     public void setEstado(String estado) {
         this.estado = estado;
     }
+
+    public String getEstadoPago() { return estadoPago; }
+
+    public void setEstadoPago(String estadoPago) { this.estadoPago = estadoPago; }
 
     // Getter/Setter
     public String getTipo() {
@@ -72,11 +81,19 @@ public class FacturaDTO {
         this.detalles = detalles;
     }
 
-    public Double getSaldo() {
+    public BigDecimal getSaldo() {
         return saldo;
     }
 
-    public void setSaldo(Double saldo) {
+    public void setSaldo(BigDecimal saldo) {
         this.saldo = saldo;
+    }
+
+    public BigDecimal getMontoAplicado() {
+        return montoAplicado;
+    }
+
+    public void setMontoAplicado(BigDecimal montoAplicado) {
+        this.montoAplicado = montoAplicado;
     }
 }
