@@ -86,10 +86,26 @@ public class FacturaController {
         return ResponseEntity.ok(facturaService.buscarFacturasPendientesPorCliente(clienteId));
     }
 
+
+
     @PostMapping("/{id}/emitir-credito")
     public ResponseEntity<?> emitirCredito(@PathVariable Integer id) {
         try {
             Factura factura = facturaService.emitirCredito(id);
+            return ResponseEntity.ok(factura.getNumeroFactura());
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
+    }
+
+
+
+    @PostMapping("/{id}/emitir-contado")
+    public ResponseEntity<?> emitirContado(@PathVariable Integer id) {
+        try {
+            Factura factura = facturaService.emitirContado(id);
             return ResponseEntity.ok(factura.getNumeroFactura());
         } catch (Exception e) {
             return ResponseEntity

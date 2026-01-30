@@ -126,8 +126,14 @@ public class FacturaService {
     @Transactional
     public Factura actualizarFactura(Integer id, FacturaDTO dto) {
         // Buscar factura existente
-        Factura facturaExistente = facturaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Factura no encontrada con ID: " + id));
+        Factura facturaExistente = facturaRepository.findById(id).orElseThrow(() -> new RuntimeException("Factura no encontrada con ID: " + id));
+
+        // ✅ BLOQUEO: si ya tiene pagos aplicados, no se permite modificar (aunque esté BORRADOR)
+        BigDecimal pagado = obtenerMontoAplicado(id);
+        if (pagado.compareTo(BigDecimal.ZERO) > 0) {
+            throw new RuntimeException("No se puede actualizar la factura porque ya tiene pagos aplicados.");
+        }
+
 
         // Detectar cambios
         boolean clienteCambiado = !Objects.equals(facturaExistente.getCliente().getId(), dto.getClienteId());
@@ -142,6 +148,11 @@ public class FacturaService {
         facturaExistente.setTipo(dto.getTipo());
         facturaExistente.setCliente(new Cliente(dto.getClienteId()));
         facturaExistente.setTotal(dto.getTotal());
+
+        // ✅ Como NO hay pagos (pagado = 0), el saldo debe ser igual al total
+        facturaExistente.setSaldo(dto.getTotal());
+        facturaExistente.setEstadoPago("PENDIENTE");
+
 
         // Obtener detalles actuales
         List<DetalleFactura> detallesActuales = facturaExistente.getDetalles();
@@ -265,6 +276,75 @@ public class FacturaService {
 
         return facturaRepository.save(f);
     }
+
+
+
+    @Transactional
+    public Factura emitirContado(Integer facturaId) {
+
+        Factura f = facturaRepository.findById(facturaId)
+                .orElseThrow(() -> new RuntimeException("Factura no encontrada con ID: " + facturaId));
+
+        // Si ya está emitida, no repetir
+        if ("EMITIDA".equalsIgnoreCase(f.getEstado())) {
+            return f;
+        }
+
+        // Solo permitimos emitir si está en borrador
+        if (!"BORRADOR".equalsIgnoreCase(f.getEstado())) {
+            throw new RuntimeException("Solo se puede emitir una factura en estado BORRADOR.");
+        }
+
+        // ✅ CONTADO: debe estar totalmente pagada
+        if (f.getSaldo() == null || f.getSaldo().compareTo(BigDecimal.ZERO) != 0) {
+            throw new RuntimeException("Para emitir en FCC (contado) el saldo debe ser 0 (pago completo).");
+        }
+
+        // ✅ Asignar número correlativo REAL + reintento si choca UNIQUE
+        if (f.getNumeroFactura() == null || f.getNumeroFactura().trim().isEmpty() || "0".equals(f.getNumeroFactura())) {
+
+            int intentos = 0;
+
+            while (true) {
+                intentos++;
+                if (intentos > 5) {
+                    throw new RuntimeException("No se pudo asignar un número de factura único. Intenta nuevamente.");
+                }
+
+                Correlativo cor = correlativoRepository.findByClaveForUpdate("FACTURA");
+                if (cor == null) {
+                    throw new RuntimeException("No existe correlativo configurado para FACTURA.");
+                }
+
+                Long numero = cor.getSiguienteNumero();
+
+                // Reservar siguiente número
+                cor.setSiguienteNumero(numero + 1);
+                correlativoRepository.save(cor);
+
+                // Intentar asignar
+                f.setNumeroFactura(String.valueOf(numero));
+
+                try {
+                    facturaRepository.saveAndFlush(f);
+                    break; // ✅ ok
+                } catch (DataIntegrityViolationException ex) {
+                    f.setNumeroFactura(null);
+                }
+            }
+        }
+
+        // ✅ Emitir en contado
+        f.setEstado("EMITIDA");
+        f.setTipo("FCC");
+        f.setFechaEmision(new Date());
+
+        // Si saldo es 0, dejamos PAGADA sí o sí
+        f.setEstadoPago("PAGADA");
+
+        return facturaRepository.save(f);
+    }
+
 
 
 
