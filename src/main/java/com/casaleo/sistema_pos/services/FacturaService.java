@@ -112,9 +112,24 @@ public class FacturaService {
             det.setFactura(facturaGuardada);
             det.setProducto(producto);
             det.setCantidad(detalle.getCantidad());
-            det.setPrecioUnitario(detalle.getPrecioUnitario());
+
+            // ✅ VALIDACIÓN BACKEND: si NO es editable, se fuerza el precio del producto
+            BigDecimal precioFinal;
+
+            if (producto.isPrecioEditable()) {
+                if (detalle.getPrecioUnitario() == null || detalle.getPrecioUnitario().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new RuntimeException("Precio unitario inválido para producto editable: " + producto.getNombre());
+                }
+                precioFinal = detalle.getPrecioUnitario();
+            } else {
+                // usar precio del producto (int/long) -> BigDecimal
+                precioFinal = BigDecimal.valueOf(producto.getPrecio());
+            }
+
+            det.setPrecioUnitario(precioFinal);
 
             detalleFacturaRepository.save(det);
+
         }
 
         return facturaGuardada;
@@ -125,20 +140,38 @@ public class FacturaService {
 
     @Transactional
     public Factura actualizarFactura(Integer id, FacturaDTO dto) {
-        // Buscar factura existente
-        Factura facturaExistente = facturaRepository.findById(id).orElseThrow(() -> new RuntimeException("Factura no encontrada con ID: " + id));
 
-        // ✅ BLOQUEO: si ya tiene pagos aplicados, no se permite modificar (aunque esté BORRADOR)
-        BigDecimal pagado = obtenerMontoAplicado(id);
-        if (pagado.compareTo(BigDecimal.ZERO) > 0) {
-            throw new RuntimeException("No se puede actualizar la factura porque ya tiene pagos aplicados.");
+        Factura facturaExistente = facturaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Factura no encontrada con ID: " + id));
+
+        // ✅ Bloqueo total si ya está EMITIDA
+        if ("EMITIDA".equalsIgnoreCase(facturaExistente.getEstado())) {
+            throw new RuntimeException("No se puede actualizar: la factura ya está EMITIDA.");
         }
 
+        // ✅ Si ya tiene pagos aplicados: SOLO permitimos cambiar el TIPO.
+        BigDecimal pagado = obtenerMontoAplicado(id);
+        boolean tienePagos = pagado.compareTo(BigDecimal.ZERO) > 0;
 
-        // Detectar cambios
         boolean clienteCambiado = !Objects.equals(facturaExistente.getCliente().getId(), dto.getClienteId());
         boolean tipoCambiado = !Objects.equals(facturaExistente.getTipo(), dto.getTipo());
-        boolean detallesCambiados = true; // por ahora, siempre consideramos cambios
+
+        // ✅ Con pagos: SOLO tipo
+        if (tienePagos) {
+            if (clienteCambiado) {
+                throw new RuntimeException("Con pagos aplicados no se puede cambiar el cliente. Solo se permite cambiar el tipo (FCC/FCR).");
+            }
+
+            if (!tipoCambiado) {
+                return facturaExistente; // no hay cambios reales
+            }
+
+            facturaExistente.setTipo(dto.getTipo());
+            return facturaRepository.save(facturaExistente);
+        }
+
+        // ✅ Sin pagos: permitimos actualizar todo
+        boolean detallesCambiados = true; // TODO: si querés, luego comparamos realmente
 
         if (!clienteCambiado && !tipoCambiado && !detallesCambiados) {
             return facturaExistente;
@@ -149,16 +182,15 @@ public class FacturaService {
         facturaExistente.setCliente(new Cliente(dto.getClienteId()));
         facturaExistente.setTotal(dto.getTotal());
 
-        // ✅ Como NO hay pagos (pagado = 0), el saldo debe ser igual al total
+        // ✅ Como NO hay pagos, el saldo debe ser igual al total
         facturaExistente.setSaldo(dto.getTotal());
         facturaExistente.setEstadoPago("PENDIENTE");
-
 
         // Obtener detalles actuales
         List<DetalleFactura> detallesActuales = facturaExistente.getDetalles();
         List<DetalleFacturaDTO> detallesNuevos = dto.getDetalles();
 
-        // Eliminar los detalles que ya no están
+        // Eliminar / actualizar detalles existentes
         detallesActuales.removeIf(detalleExistente -> {
             Integer productoId = detalleExistente.getProducto().getId();
             Optional<DetalleFacturaDTO> match = detallesNuevos.stream()
@@ -166,15 +198,28 @@ public class FacturaService {
                     .findFirst();
 
             if (match.isPresent()) {
-                // Actualizar cantidad o precio si cambiaron
                 DetalleFacturaDTO nuevo = match.get();
                 detalleExistente.setCantidad(nuevo.getCantidad());
-                detalleExistente.setPrecioUnitario(nuevo.getPrecioUnitario());
-                return false; // No eliminar
+
+                Producto producto = productoRepository.findById(nuevo.getProductoId())
+                        .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+                BigDecimal precioFinal;
+                if (producto.isPrecioEditable()) {
+                    if (nuevo.getPrecioUnitario() == null || nuevo.getPrecioUnitario().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new RuntimeException("Precio unitario inválido para producto editable: " + producto.getNombre());
+                    }
+                    precioFinal = nuevo.getPrecioUnitario();
+                } else {
+                    precioFinal = BigDecimal.valueOf(producto.getPrecio());
+                }
+
+                detalleExistente.setPrecioUnitario(precioFinal);
+
+                return false; // no eliminar
             } else {
-                // Eliminar si no está en la nueva lista
                 detalleFacturaRepository.delete(detalleExistente);
-                return true; // Eliminar de la lista en memoria
+                return true; // eliminar
             }
         });
 
@@ -184,17 +229,32 @@ public class FacturaService {
                     .anyMatch(d -> Objects.equals(d.getProducto().getId(), nuevo.getProductoId()));
 
             if (!yaExiste) {
+                Producto producto = productoRepository.findById(nuevo.getProductoId())
+                        .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
                 DetalleFactura nuevoDetalle = new DetalleFactura();
                 nuevoDetalle.setFactura(facturaExistente);
-                nuevoDetalle.setProducto(new Producto(nuevo.getProductoId()));
+                nuevoDetalle.setProducto(producto);
                 nuevoDetalle.setCantidad(nuevo.getCantidad());
-                nuevoDetalle.setPrecioUnitario(nuevo.getPrecioUnitario());
+
+                BigDecimal precioFinal;
+                if (producto.isPrecioEditable()) {
+                    if (nuevo.getPrecioUnitario() == null || nuevo.getPrecioUnitario().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new RuntimeException("Precio unitario inválido para producto editable: " + producto.getNombre());
+                    }
+                    precioFinal = nuevo.getPrecioUnitario();
+                } else {
+                    precioFinal = BigDecimal.valueOf(producto.getPrecio());
+                }
+
+                nuevoDetalle.setPrecioUnitario(precioFinal);
                 detallesActuales.add(nuevoDetalle);
             }
         }
 
         return facturaRepository.save(facturaExistente);
     }
+
 
 
 

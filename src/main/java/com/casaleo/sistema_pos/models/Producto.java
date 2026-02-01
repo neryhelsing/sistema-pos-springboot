@@ -21,10 +21,13 @@ public class Producto {
     private int cantidad;
 
     @Column(nullable = false) // Columna "precio", no permite valores nulos
-    private int precio; // Cambiar a "double" si manejas decimales
+    private long precio; // Cambiar a "double" si manejas decimales
 
     @Column(nullable = false)
     private int gravado; // Puede ser 5 o 10
+
+    @Column(name = "precio_editable", nullable = false)
+    private boolean precioEditable = false; // ✅ por defecto NO
 
     @Column(length = 255) // Columna "descripcion", permite valores nulos
     private String descripcion;
@@ -80,11 +83,11 @@ public class Producto {
         this.cantidad = cantidad;
     }
 
-    public int getPrecio() {
+    public long getPrecio() {
         return precio;
     }
 
-    public void setPrecio(int precio) {
+    public void setPrecio(long precio) {
         this.precio = precio;
     }
 
@@ -121,5 +124,13 @@ public class Producto {
 
     public void setActualizadoEn(LocalDateTime actualizadoEn) {
         this.actualizadoEn = actualizadoEn;
+    }
+
+    public boolean isPrecioEditable() {
+        return precioEditable;
+    }
+
+    public void setPrecioEditable(boolean precioEditable) {
+        this.precioEditable = precioEditable;
     }
 }
