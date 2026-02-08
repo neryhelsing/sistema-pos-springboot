@@ -1,5 +1,6 @@
 package com.casaleo.sistema_pos.dto;
 
+import com.casaleo.sistema_pos.models.EstadoPago;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -13,12 +14,14 @@ public class PagoResponseDTO {
     private BigDecimal totalPagado;
     private String creadoEn;
     private MetodoPago metodo;
+    private EstadoPago estado;
 
-    public PagoResponseDTO(Integer id, String nPago, BigDecimal totalPagado, LocalDateTime creadoEn, MetodoPago metodo) {
+    public PagoResponseDTO(Integer id, String nPago, BigDecimal totalPagado, LocalDateTime creadoEn, MetodoPago metodo, EstadoPago estado) {
         this.id = id;
         this.nPago = nPago;
         this.totalPagado = totalPagado;
         this.metodo = metodo;
+        this.estado = estado;
 
         // ✅ Evitar NullPointerException si DB aún no devolvió el timestamp
         if (creadoEn != null) {
@@ -48,4 +51,6 @@ public class PagoResponseDTO {
     public MetodoPago getMetodo() {
         return metodo;
     }
+
+    public EstadoPago getEstado() { return estado; }
 }

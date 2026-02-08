@@ -28,6 +28,17 @@ public class Pago {
     @Column(name = "metodo", nullable = false)
     private MetodoPago metodo;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoPago estado = EstadoPago.ACTIVO;
+
+    @Column(name = "anulado_en", nullable = true)
+    private LocalDateTime anuladoEn;
+
+    @Column(name = "motivo_anulacion", nullable = true)
+    private String motivoAnulacion;
+
+
     // DB: banco (NULL)
     @Column(name = "banco", nullable = true)
     private String banco;
@@ -170,5 +181,30 @@ public class Pago {
 
     public void setDetalles(List<DetallePago> detalles) {
         this.detalles = detalles;
+    }
+
+    public EstadoPago getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoPago estado) {
+        this.estado = estado;
+    }
+
+    public LocalDateTime getAnuladoEn() {
+        return anuladoEn;
+    }
+
+    public void setAnuladoEn(LocalDateTime anuladoEn) {
+        this.anuladoEn = anuladoEn;
+    }
+
+
+    public String getMotivoAnulacion() {
+        return motivoAnulacion;
+    }
+
+    public void setMotivoAnulacion(String motivoAnulacion) {
+        this.motivoAnulacion = motivoAnulacion;
     }
 }

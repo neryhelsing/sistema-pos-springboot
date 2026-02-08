@@ -11,12 +11,18 @@ import com.casaleo.sistema_pos.models.Pago;
 import com.casaleo.sistema_pos.repositories.ClienteRepository;
 import com.casaleo.sistema_pos.repositories.FacturaRepository;
 import com.casaleo.sistema_pos.repositories.PagoRepository;
+import com.casaleo.sistema_pos.models.Correlativo;
+import com.casaleo.sistema_pos.repositories.CorrelativoRepository;
+import com.casaleo.sistema_pos.repositories.DetallePagoRepository;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +40,13 @@ public class PagoService {
     @Autowired
     private ClienteRepository clienteRepository;
 
+    @Autowired
+    private DetallePagoRepository detallePagoRepository;
+
+    @Autowired
+    private CorrelativoRepository correlativoRepository;
+
+
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
     }
@@ -50,7 +63,8 @@ public class PagoService {
                 p.getNPago(),
                 p.getTotalPagado(),
                 p.getCreadoEn(),
-                p.getMetodo()
+                p.getMetodo(),
+                p.getEstado()
         ));
     }
 
@@ -82,6 +96,7 @@ public class PagoService {
         pago.setCliente(cliente);
         pago.setMetodo(dto.getMetodo());
         pago.setTotalPagado(total);
+        pago.setEstado(com.casaleo.sistema_pos.models.EstadoPago.ACTIVO);
 
         // Normalizar valores
         BigDecimal montoEntregado = nz(dto.getMontoEntregado());
@@ -159,13 +174,49 @@ public class PagoService {
             throw new RuntimeException("Método de pago no válido.");
         }
 
-        // ===== Guardar pago para obtener ID =====
-        pago.setNPago("0"); // temporal
-        pago = pagoRepository.save(pago);
 
-        // correlativo simple (más adelante formateás tipo REC-000001)
-        pago.setNPago(String.valueOf(pago.getId()));
-        pago = pagoRepository.save(pago);
+
+
+
+        // ===== Guardar pago para obtener ID =====
+        // ✅ Asignar n_pago correlativo REAL + reintento si choca UNIQUE
+        if (pago.getNPago() == null || pago.getNPago().trim().isEmpty() || "0".equals(pago.getNPago())) {
+
+            int intentos = 0;
+
+            while (true) {
+                intentos++;
+                if (intentos > 5) {
+                    throw new RuntimeException("No se pudo asignar un número de pago único. Intenta nuevamente.");
+                }
+
+                Correlativo cor = correlativoRepository.findByClaveForUpdate("PAGO");
+                if (cor == null) {
+                    throw new RuntimeException("No existe correlativo configurado para PAGO.");
+                }
+
+                Long numero = cor.getSiguienteNumero();
+
+                // Reservar siguiente número
+                cor.setSiguienteNumero(numero + 1);
+                correlativoRepository.save(cor);
+
+                // Intentar asignar
+                pago.setNPago(String.valueOf(numero));
+
+                try {
+                    // Forzar flush para validar UNIQUE acá
+                    pagoRepository.saveAndFlush(pago);
+                    break; // ✅ ok
+                } catch (DataIntegrityViolationException ex) {
+                    pago.setNPago(null);
+                }
+            }
+        }
+
+
+
+
 
         // ===== Crear detalles + actualizar facturas =====
         List<DetallePago> detalles = new ArrayList<>();
@@ -179,10 +230,17 @@ public class PagoService {
             Factura factura = facturaRepository.findById(det.getFacturaId())
                     .orElseThrow(() -> new RuntimeException("Factura no encontrada: " + det.getFacturaId()));
 
+
+
+
             // Validar que la factura pertenezca al cliente
-            if (factura.getCliente() != null && factura.getCliente().getId() != cliente.getId()) {
+            if (factura.getCliente() == null || !factura.getCliente().getId().equals(cliente.getId())) {
                 throw new RuntimeException("La factura " + factura.getNumeroFactura() + " no pertenece al cliente seleccionado.");
             }
+
+
+
+
 
             BigDecimal saldoActual = factura.getSaldo();
             if (saldoActual == null) saldoActual = BigDecimal.ZERO;
@@ -216,8 +274,19 @@ public class PagoService {
         }
 
         // Guardar detalle_pago (cascade)
-        pago.setDetalles(detalles);
+        if (pago.getDetalles() == null) {
+            pago.setDetalles(new ArrayList<>());
+        } else {
+            pago.getDetalles().clear();
+        }
+
+        for (DetallePago dp : detalles) {
+            dp.setPago(pago);      // relación bidireccional
+            pago.getDetalles().add(dp);
+        }
+
         pago = pagoRepository.save(pago);
+
 
         // Respuesta (refrescar)
         Pago pagoRefrescado = pagoRepository.findById(pago.getId())
@@ -228,7 +297,111 @@ public class PagoService {
                 pagoRefrescado.getNPago(),
                 pagoRefrescado.getTotalPagado(),
                 pagoRefrescado.getCreadoEn(),
-                pagoRefrescado.getMetodo()
+                pagoRefrescado.getMetodo(),
+                pagoRefrescado.getEstado()
         );
+    }
+
+
+    @Transactional(readOnly = true)
+    public com.casaleo.sistema_pos.dto.PagoViewDTO obtenerPago(Integer pagoId) {
+
+        Pago pago = pagoRepository.findById(pagoId)
+                .orElseThrow(() -> new RuntimeException("Pago no encontrado: " + pagoId));
+
+        // Traer detalles
+        List<DetallePago> detalles = detallePagoRepository.findByPago_Id(pagoId);
+
+        List<com.casaleo.sistema_pos.dto.PagoDetalleResponseDTO> detDTO = new ArrayList<>();
+        for (DetallePago d : detalles) {
+            Factura f = d.getFactura();
+
+            // OJO: acá uso campos que ya tenés en tu Factura JSON: id, numeroFactura, fechaEmision, total, saldo
+            detDTO.add(new com.casaleo.sistema_pos.dto.PagoDetalleResponseDTO(
+                    f.getId(),
+                    f.getNumeroFactura(),
+                    f.getFechaEmision() != null ? f.getFechaEmision().toString() : null,
+                    f.getTotal(),
+                    f.getSaldo(),
+                    d.getMontoAplicado()
+            ));
+        }
+
+        Cliente c = pago.getCliente();
+
+        return new com.casaleo.sistema_pos.dto.PagoViewDTO(
+                pago.getId(),
+                pago.getNPago(),
+                pago.getEstado(),
+                pago.getCreadoEn(),
+                pago.getMetodo(),
+                c.getId(),
+                c.getNombre(),
+                c.getRuc(),
+                pago.getBanco(),
+                pago.getNOperacion(),
+                pago.getTotalPagado(),
+                pago.getMontoEntregado(),
+                pago.getVuelto(),
+                pago.getMontoTransferido(),
+                pago.getEfectivoDevuelto(),
+                detDTO
+        );
+    }
+
+
+
+
+    @Transactional
+    public void anularPago(Integer pagoId, String motivo) {
+
+        Pago pago = pagoRepository.findById(pagoId)
+                .orElseThrow(() -> new RuntimeException("Pago no encontrado: " + pagoId));
+
+        if (pago.getEstado() == com.casaleo.sistema_pos.models.EstadoPago.ANULADO) {
+            throw new RuntimeException("El pago ya está ANULADO.");
+        }
+
+        List<DetallePago> detalles = detallePagoRepository.findByPago_Id(pagoId);
+
+        if (detalles.isEmpty()) {
+            throw new RuntimeException("El pago no tiene detalles para revertir.");
+        }
+
+        // Revertir saldos de facturas
+        for (DetallePago d : detalles) {
+            Factura factura = d.getFactura();
+            BigDecimal monto = d.getMontoAplicado() == null ? BigDecimal.ZERO : d.getMontoAplicado();
+
+            BigDecimal saldo = factura.getSaldo() == null ? BigDecimal.ZERO : factura.getSaldo();
+            BigDecimal totalFactura = factura.getTotal() == null ? BigDecimal.ZERO : factura.getTotal();
+
+            BigDecimal nuevoSaldo = saldo.add(monto);
+
+            // No pasarse del total (por seguridad)
+            if (totalFactura.compareTo(BigDecimal.ZERO) > 0 && nuevoSaldo.compareTo(totalFactura) > 0) {
+                nuevoSaldo = totalFactura;
+            }
+
+            factura.setSaldo(nuevoSaldo);
+
+            // Estado pago factura
+            if (totalFactura.compareTo(BigDecimal.ZERO) > 0 && nuevoSaldo.compareTo(totalFactura) == 0) {
+                factura.setEstadoPago("PENDIENTE");
+            } else if (nuevoSaldo.compareTo(BigDecimal.ZERO) > 0) {
+                factura.setEstadoPago("PARCIAL");
+            } else {
+                factura.setEstadoPago("PAGADA");
+            }
+
+            facturaRepository.save(factura);
+        }
+
+        // Marcar pago como anulado
+        pago.setEstado(com.casaleo.sistema_pos.models.EstadoPago.ANULADO);
+        pago.setAnuladoEn(java.time.LocalDateTime.now());
+        pago.setMotivoAnulacion(motivo);
+
+        pagoRepository.save(pago);
     }
 }

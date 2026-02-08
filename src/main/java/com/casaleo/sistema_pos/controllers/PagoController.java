@@ -29,4 +29,17 @@ public class PagoController {
     public PagoResponseDTO crearPago(@RequestBody PagoCreateDTO dto) {
         return pagoService.crearPago(dto);
     }
+
+    @GetMapping("/{id}")
+    public com.casaleo.sistema_pos.dto.PagoViewDTO obtenerPago(@PathVariable Integer id) {
+        return pagoService.obtenerPago(id);
+    }
+
+    @PutMapping("/{id}/anular")
+    public void anularPago(
+            @PathVariable Integer id,
+            @RequestParam(defaultValue = "") String motivo
+    ) {
+        pagoService.anularPago(id, motivo);
+    }
 }
